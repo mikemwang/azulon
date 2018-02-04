@@ -8,112 +8,105 @@ import time
 import math  
 import RPi.GPIO as GPIO
 
-from smbus import SMBus
-import time
+class Accelerometer:
+    def __init__(self, config):
+        settings = RTIMU.Settings(config)
+        self.imu = RTIMU.RTIMU(settings)
+        if (not self.imu.IMUInit()):  
+            print "couldn't initialize IMU"
+        self.imu.setSlerpPower(0.02)  
+        self.imu.setGyroEnable(True)  
+        self.imu.setAccelEnable(True)  
+        self.imu.setCompassEnable(True)  
+        self.poll_interval = self.imu.IMUGetPollInterval()/1000.0  
+        self.last_data = None
 
-bus = SMBus(1)
+    def read(self):
+        if self.imu.IMURead():
+            data = self.imu.getIMUData()['accel']
+            self.last_data = data
+            return data
+        else:
+            return self.last_data
+         
 
- 
-SETTINGS_FILE = "RTIMULib"  
-LIGHTER_PIN = 8
-CHAMBER_PIN = 10
-ACCEL_THRESHOLD = 1.5
- 
-s = RTIMU.Settings("settings_1")  
-s2 = RTIMU.Settings("settings_test")
-imu = RTIMU.RTIMU(s)  
-imu2 = RTIMU.RTIMU(s2)
- 
-if (not imu.IMUInit()):  
+left_arm_settings = RTIMU.Settings("left_arm")
+left_arm = RTIMU.RTIMU(left_arm_settings)
+if (not left_arm.IMUInit()):
     print "couldn't initialize IMU"
+left_arm.setSlerpPower(0.02)  
+left_arm.setGyroEnable(True)  
+left_arm.setAccelEnable(True)  
+left_arm.setCompassEnable(True)  
+left_arm_poll_interval = left_arm.IMUGetPollInterval()/1000.0  
 
-if (not imu2.IMUInit()):  
-    print "couldn't initialize IMU2"
 
-bus = SMBus(1)
+right_arm_settings = RTIMU.Settings("right_arm")
+right_arm = RTIMU.RTIMU(right_arm_settings)
+if (not right_arm.IMUInit()):  
+    print "couldn't initialize IMU"
+right_arm.setSlerpPower(0.02)  
+right_arm.setGyroEnable(True)  
+right_arm.setAccelEnable(True)  
+right_arm.setCompassEnable(True)  
  
-imu.setSlerpPower(0.02)  
-imu.setGyroEnable(True)  
-imu.setAccelEnable(True)  
-imu.setCompassEnable(True)  
 
-imu2.setSlerpPower(0.02)  
-imu2.setGyroEnable(True)  
-imu2.setAccelEnable(True)  
-imu2.setCompassEnable(True)  
- 
-poll_interval = imu.IMUGetPollInterval()  
-poll_interval2 = imu2.IMUGetPollInterval()  
+left_leg_settings = RTIMU.Settings("left_leg")
+left_leg = RTIMU.RTIMU(left_leg_settings)
+if (not left_leg.IMUInit()):
+    print "couldn't initialize IMU"
+left_leg.setSlerpPower(0.02)  
+left_leg.setGyroEnable(True)  
+left_leg.setAccelEnable(True)  
+left_leg.setCompassEnable(True)  
 
-# gpio library setup
-GPIO.setmode(GPIO.BOARD)
-GPIO.setup(LIGHTER_PIN, GPIO.OUT)
-GPIO.setup(CHAMBER_PIN, GPIO.OUT)
+
+right_leg_settings = RTIMU.Settings("right_leg")
+right_leg = RTIMU.RTIMU(right_leg_settings)
+if (not right_leg.IMUInit()):  
+    print "couldn't initialize IMU"
+right_leg.setSlerpPower(0.02)  
+right_leg.setGyroEnable(True)  
+right_leg.setAccelEnable(True)  
+right_leg.setCompassEnable(True)  
+
+
+## gpio library setup GPIO.setmode(GPIO.BOARD)
+#GPIO.setup(LIGHTER_PIN, GPIO.OUT)
+#GPIO.setup(CHAMBER_PIN, GPIO.OUT)
 
 def exit_fn():
     print "Exiting cleanly"
-    GPIO.cleanup()
+    #GPIO.cleanup()
 
 atexit.register(exit_fn)
-dead_time = 0
 
-def open_and_close(time_delay):
-    GPIO.output(LIGHTER_PIN, GPIO.HIGH)
-    GPIO.output(CHAMBER_PIN, GPIO.HIGH)
-    print GPIO.input(CHAMBER_PIN)
-    GPIO.output(CHAMBER_PIN, GPIO.HIGH)
-    print GPIO.input(CHAMBER_PIN)
-    GPIO.output(CHAMBER_PIN, GPIO.HIGH)
-    print GPIO.input(CHAMBER_PIN)
+#def open_and_close(time_delay):
+#    GPIO.output(LIGHTER_PIN, GPIO.HIGH)
+#    GPIO.output(CHAMBER_PIN, GPIO.HIGH)
+#    print GPIO.input(CHAMBER_PIN)
+#    GPIO.output(CHAMBER_PIN, GPIO.HIGH)
+#    print GPIO.input(CHAMBER_PIN)
+#    GPIO.output(CHAMBER_PIN, GPIO.HIGH)
+#    print GPIO.input(CHAMBER_PIN)
+#
+#    time.sleep(time_delay)
+#
+#    GPIO.output(LIGHTER_PIN, GPIO.LOW)
+#    GPIO.output(CHAMBER_PIN, GPIO.LOW)
+#    print GPIO.input(CHAMBER_PIN)
 
-    time.sleep(time_delay)
+#left_arm = Accelerometer("left_arm")
 
-    GPIO.output(LIGHTER_PIN, GPIO.LOW)
-    GPIO.output(CHAMBER_PIN, GPIO.LOW)
-    print GPIO.input(CHAMBER_PIN)
  
 while True:  
-
-    if imu.IMURead():  
-        data = imu.getIMUData()  
-
-        #fields
-        fusionPose = data["fusionPose"]  
-        gyro = data["gyro"]  
-        fusionQPose = data["fusionQPose"]  
-        accel = data["accel"]  
-        compass = data["compass"]  
-
-        print "accel1: ", accel
-        dead_time = time.time()
-    else:
-        if time.time()-dead_time > 0.1:
-            print("resetting")
-            imu = RTIMU.RTIMU(s)  
-            imu.IMUInit()
-            imu.setSlerpPower(0.02)  
-            imu.setGyroEnable(True)  
-            imu.setAccelEnable(True)  
-            imu.setCompassEnable(True)  
-            dead_time - time.time()
-
-    #if imu2.IMURead():  
-    #    data = imu2.getIMUData()  
-
-    #    #fields
-    #    fusionPose = data["fusionPose"]  
-    #    gyro = data["gyro"]  
-    #    fusionQPose = data["fusionQPose"]  
-    #    accel = data["accel"]  
-    #    compass = data["compass"]  
-
-    #    print "accel2: ", accel
-
-
-    #    #if -accel[1] > ACCEL_THRESHOLD:
-    #    #     print "FIRE IN THE HOLE"
-    #    #     open_and_close(1)
-    #    #     time.sleep(0.5)
-
-    time.sleep(poll_interval*1.0/1000.0)  
+    if left_arm.IMURead():
+        print("left_arm", left_arm.getIMUData()['accel'])
+    if right_arm.IMURead():
+        print("right_arm", right_arm.getIMUData()['accel'])
+    if left_leg.IMURead():
+        print("left_leg", left_leg.getIMUData()['accel'])
+    if right_leg.IMURead():
+        print("right_leg", right_leg.getIMUData()['accel'])
+    time.sleep(left_arm_poll_interval)
 
