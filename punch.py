@@ -152,17 +152,17 @@ while True:
     if right_leg.IMURead():
         right_leg_controller.update(right_leg.getIMUData()['accel'])
     #left_arm_controller.run()
-    right_arm_controller.run()
-    if right_arm_controller.fired:
-        right_arm_controller.fired = False
-        right_arm_settings = RTIMU.Settings("right_arm")
-        right_arm = RTIMU.RTIMU(right_arm_settings)
-        if (not right_arm.IMUInit()):  
-            print "couldn't initialize IMU"
-        right_arm.setSlerpPower(0.02)  
-        right_arm.setGyroEnable(True)  
-        right_arm.setAccelEnable(True)  
-        right_arm.setCompassEnable(True)  
+    #right_arm_controller.run()
+    #if right_arm_controller.fired:
+    #    right_arm_controller.fired = False
+    #    right_arm_settings = RTIMU.Settings("right_arm")
+    #    right_arm = RTIMU.RTIMU(right_arm_settings)
+    #    if (not right_arm.IMUInit()):  
+    #        print "couldn't initialize IMU"
+    #    right_arm.setSlerpPower(0.02)  
+    #    right_arm.setGyroEnable(True)  
+    #    right_arm.setAccelEnable(True)  
+    #    right_arm.setCompassEnable(True)  
     #left_leg_controller.run()
     #right_leg_controller.run()
     time.sleep(left_arm_poll_interval)
