@@ -1,11 +1,11 @@
-import sys, getopt  
+import sys, getopt
 import atexit
-   
-sys.path.append('.')  
-import RTIMU  
-import os.path  
-import time  
-import math  
+
+sys.path.append('.')
+import RTIMU
+import os.path
+import time
+import math
 import RPi.GPIO as GPIO
 
 class Controller:
@@ -69,8 +69,8 @@ class Controller:
         elif self.state == 3:
             if time.time() - self.cooldown_start > self.cooldown:
                 self.state = 0
-        
-                    
+
+
     def close(self):
         GPIO.output(self.control_pin, GPIO.LOW)
 
@@ -82,52 +82,52 @@ left_arm_settings = RTIMU.Settings("left_arm")
 left_arm = RTIMU.RTIMU(left_arm_settings)
 if not left_arm.IMUInit():
     print "couldn't initialize Left Arm"
-    
-left_arm.setSlerpPower(0.02)  
-left_arm.setGyroEnable(True)  
-left_arm.setAccelEnable(True)  
-left_arm.setCompassEnable(True)  
-left_arm_poll_interval = left_arm.IMUGetPollInterval()/1000.0  
+
+left_arm.setSlerpPower(0.02)
+left_arm.setGyroEnable(True)
+left_arm.setAccelEnable(True)
+left_arm.setCompassEnable(True)
+left_arm_poll_interval = left_arm.IMUGetPollInterval()/1000.0
 left_arm_control_pin = 11
 left_arm_controller = Controller(left_arm_control_pin, 1.7, -1.7, 0.1)
 
 
 right_arm_settings = RTIMU.Settings("right_arm")
 right_arm = RTIMU.RTIMU(right_arm_settings)
-if (not right_arm.IMUInit()):  
+if (not right_arm.IMUInit()):
     print "couldn't initialize IMU"
-right_arm.setSlerpPower(0.02)  
-right_arm.setGyroEnable(True)  
-right_arm.setAccelEnable(True)  
-right_arm.setCompassEnable(True)  
+right_arm.setSlerpPower(0.02)
+right_arm.setGyroEnable(True)
+right_arm.setAccelEnable(True)
+right_arm.setCompassEnable(True)
 right_arm_control_pin = 16
-right_arm_controller = Controller(right_arm_control_pin, 1.7, -1.7, 0.2)
- 
+right_arm_controller = Controller(right_arm_control_pin, 1.7, -1.7, 0.1)
+
 
 left_leg_settings = RTIMU.Settings("left_leg")
 left_leg = RTIMU.RTIMU(left_leg_settings)
 if (not left_leg.IMUInit()):
     print "couldn't initialize IMU"
-left_leg.setSlerpPower(0.02)  
-left_leg.setGyroEnable(True)  
-left_leg.setAccelEnable(True)  
-left_leg.setCompassEnable(True)  
+left_leg.setSlerpPower(0.02)
+left_leg.setGyroEnable(True)
+left_leg.setAccelEnable(True)
+left_leg.setCompassEnable(True)
 left_leg_control_pin = 37
 left_leg_controller = Controller(left_leg_control_pin, 2.7, -2.7, 0.1)
 
 right_leg_settings = RTIMU.Settings("right_leg")
 right_leg = RTIMU.RTIMU(right_leg_settings)
-if (not right_leg.IMUInit()):  
+if (not right_leg.IMUInit()):
     print "couldn't initialize IMU"
-right_leg.setSlerpPower(0.02)  
-right_leg.setGyroEnable(True)  
-right_leg.setAccelEnable(True)  
-right_leg.setCompassEnable(True)  
+right_leg.setSlerpPower(0.02)
+right_leg.setGyroEnable(True)
+right_leg.setAccelEnable(True)
+right_leg.setCompassEnable(True)
 right_leg_control_pin = 36
 right_leg_controller = Controller(right_leg_control_pin, 2.7, -2.7, 0.1)
 
 
-# gpio library setup 
+# gpio library setup
 GPIO.setmode(GPIO.BOARD)
 GPIO.setup(left_arm_control_pin, GPIO.OUT, initial=GPIO.LOW)
 GPIO.setup(right_arm_control_pin, GPIO.OUT, initial=GPIO.LOW)
@@ -140,7 +140,7 @@ def exit_fn():
 
 atexit.register(exit_fn)
 
-while True:  
+while True:
     if left_arm.IMURead():
         left_arm_controller.update(left_arm.getIMUData()['accel'])
     if right_arm.IMURead():
@@ -152,17 +152,6 @@ while True:
     if right_leg.IMURead():
         right_leg_controller.update(right_leg.getIMUData()['accel'])
     #left_arm_controller.run()
-    #right_arm_controller.run()
-    #if right_arm_controller.fired:
-    #    right_arm_controller.fired = False
-    #    right_arm_settings = RTIMU.Settings("right_arm")
-    #    right_arm = RTIMU.RTIMU(right_arm_settings)
-    #    if (not right_arm.IMUInit()):  
-    #        print "couldn't initialize IMU"
-    #    right_arm.setSlerpPower(0.02)  
-    #    right_arm.setGyroEnable(True)  
-    #    right_arm.setAccelEnable(True)  
-    #    right_arm.setCompassEnable(True)  
     #left_leg_controller.run()
     #right_leg_controller.run()
     time.sleep(left_arm_poll_interval)
