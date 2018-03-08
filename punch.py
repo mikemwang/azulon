@@ -3,9 +3,7 @@ import atexit
 
 sys.path.append('.')
 import RTIMU
-import os.path
 import time
-import math
 import RPi.GPIO as GPIO
 
 class Controller:
@@ -78,7 +76,7 @@ class Controller:
         GPIO.output(self.control_pin, GPIO.HIGH)
 
 
-class IMU_wrapper:
+class IMU:
     def __init__(self, name, settings, retry=False):
         """
         initialization function
@@ -120,7 +118,7 @@ class IMU_wrapper:
         """ reads and returns the accel if self.poll_interval has ellapsed,
             else just returns most recent accel """
         if not self.active:
-            return "Bad IMU at "+self.location
+            return self.name+" IMU OFFLINE"
         if time.time() - self.last_read_time > self.poll_interval:
             if self.imu.IMURead():
                 self.accel = self.imu.getIMUData()['accel']
@@ -131,8 +129,8 @@ class IMU_wrapper:
 # gpio library setup
 def GPIOSetup():
     GPIO.setmode(GPIO.BOARD)
-    GPIO.setup(right_arm_control_pin, GPIO.OUT, initial=GPIO.LOW)
-    GPIO.setup(left_arm_control_pin, GPIO.OUT, initial=GPIO.LOW)
+    #GPIO.setup(right_arm_control_pin, GPIO.OUT, initial=GPIO.LOW)
+    #GPIO.setup(left_arm_control_pin, GPIO.OUT, initial=GPIO.LOW)
     #GPIO.setup(right_arm_control_pin, GPIO.OUT, initial=GPIO.LOW)
     #GPIO.setup(left_leg_control_pin, GPIO.OUT, initial=GPIO.LOW)
     #GPIO.setup(right_leg_control_pin, GPIO.OUT, initial=GPIO.LOW)
@@ -144,9 +142,8 @@ def exit_fn():
 atexit.register(exit_fn)
 
 if __name__ == '__main__':
-#    GPIOSetup()
-    test_imu = IMU_wrapper( "RIGHT ARM", "right_arm",True )
-    poll_interval = left_arm.IMUGetPollInterval()/1000.0
+    GPIOSetup()
+    test_imu = IMU( "RIGHT ARM", "./config/right_arm",True )
     while True:
         print(test_imu.get_accel())
         time.sleep(0.005)

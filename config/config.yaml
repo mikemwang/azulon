@@ -1,0 +1,29 @@
+hardware_config:
+
+    left_arm:
+        name:   "LEFT ARM"           # human readable name for printing
+        config: "./config/left_arm"  # the .ini file (leave off the extension)
+        pin:    11                   # pin that activates the transistors
+
+    right_arm:
+        name:   "RIGHT ARM"
+        config: "./config/right_arm"
+        pin:    16
+
+    left_leg:
+        name:   "LEFT LEG"
+        config: "./config/left_leg"
+        pin:    37
+
+    right_leg:
+        name:   "RIGHT LEG"
+        config: "./config/right_leg"
+        pin:    36
+
+movement_params:
+    punch:
+        low: -1.7
+        high: 1.7
+        window: 0.2                  # time within which to detect high after low
+        duration: 0.15               # fire duration in seconds
+    #TODO add kick params
