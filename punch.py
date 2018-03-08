@@ -78,10 +78,63 @@ class Controller:
         GPIO.output(self.control_pin, GPIO.HIGH)
 
 
-left_arm_settings = RTIMU.Settings("right_arm")
+class IMU_wrapper:
+    def __init__(self, name, settings, retry=False):
+        """
+        initialization function
+        args:
+            name:     name of this imu
+            settings: path to settings file (leave out ini extension)
+            retry:    whether to retry connecting to imu
+        """
+        
+        self.name = name
+        # attempt to connect to imu, repeatedly if retry is true
+        self.location = settings
+        self.active = False
+        while True:
+            self.settings = RTIMU.Settings(self.location) 
+            self.imu = RTIMU.RTIMU(self.settings)
+            if not self.imu.IMUInit():
+                print self.name+"."*(2 if len(self.name) > 72 else 72-len(self.name)) + "OFFLINE"
+            else:
+                print self.name+"."*(2 if len(self.name) > 73 else 73-len(self.name)) + "ONLINE"
+                self.active = True
+                break
+            if not retry:
+                return
+            time.sleep(1)
+        self.imu.setSlerpPower(0.02)
+        self.imu.setGyroEnable(True)
+        self.imu.setAccelEnable(True)
+        self.imu.setCompassEnable(True)
+        self.poll_interval = self.imu.IMUGetPollInterval()/1000.0
+
+        # use this to ensure we don't read too often
+        self.last_read_time = 0
+        # persistent storage of most recent accel value
+        self.accel = [0,0,0]
+
+    def get_accel(self):
+        """ reads and returns the accel if self.poll_interval has ellapsed,
+            else just returns most recent accel """
+        if not self.active:
+            return "Bad IMU at "+self.location
+        self.accel = self.imu.getIMUData()['accel']
+        self.last_read_time = time.time()
+        return self.accel
+
+
+
+
+
+
+left_arm_settings = RTIMU.Settings("left_arm")
 left_arm = RTIMU.RTIMU(left_arm_settings)
 if not left_arm.IMUInit():
     print "couldn't initialize Left Arm"
+else:
+    print "left arm online"
 
 left_arm.setSlerpPower(0.02)
 left_arm.setGyroEnable(True)
@@ -105,7 +158,7 @@ def GPIOSetup():
 
 def exit_fn():
     print "Exiting cleanly"
-    GPIO.cleanup()
+    #GPIO.cleanup()
 
 atexit.register(exit_fn)
 
@@ -114,21 +167,28 @@ state = 0
 param = 1.7
 
 if __name__ == '__main__':
-    GPIOSetup()
+#    GPIOSetup()
+#    while True:
+#        if left_arm.IMURead():
+#            x = left_arm.getIMUData()['accel'][0]
+#            if x < -param and state == 0:
+#                print("here")
+#                state = 1
+#            if x > param and state == 1:
+#                print("there")
+#                state = 0
+#                GPIO.output(right_arm_control_pin, GPIO.HIGH)
+#                time.sleep(0.1)
+#                GPIO.output(right_arm_control_pin, GPIO.LOW)
+    #test_imu = IMU_wrapper( "RIGHT ARM", "right_arm",True )
+    poll_interval = left_arm.IMUGetPollInterval()/1000.0
     while True:
-        if left_arm.IMURead():
-            x = left_arm.getIMUData()['accel'][0]
-            if x < -param and state == 0:
-                print("here")
-                state = 1
-            if x > param and state == 1:
-                print("there")
-                state = 0
-                GPIO.output(right_arm_control_pin, GPIO.HIGH)
-                time.sleep(0.1)
-                GPIO.output(right_arm_control_pin, GPIO.LOW)
+        #print(test_imu.get_accel())
+        print(left_arm.getIMUData()['accel'])
+        time.sleep(poll_interval)
 
 
             #left_arm_controller.update(left_arm.getIMUData()['accel'])
-        time.sleep(left_arm_poll_interval)
+        #time.sleep(left_arm_poll_interval)
+        #time.sleep(0.3)
 
