@@ -109,6 +109,7 @@ class IMU_wrapper:
         self.imu.setAccelEnable(True)
         self.imu.setCompassEnable(True)
         self.poll_interval = self.imu.IMUGetPollInterval()/1000.0
+        print(self.poll_interval)
 
         # use this to ensure we don't read too often
         self.last_read_time = 0
@@ -120,31 +121,11 @@ class IMU_wrapper:
             else just returns most recent accel """
         if not self.active:
             return "Bad IMU at "+self.location
-        self.accel = self.imu.getIMUData()['accel']
-        self.last_read_time = time.time()
+        if time.time() - self.last_read_time > self.poll_interval:
+            if self.imu.IMURead():
+                self.accel = self.imu.getIMUData()['accel']
+                self.last_read_time = time.time()
         return self.accel
-
-
-
-
-
-
-left_arm_settings = RTIMU.Settings("left_arm")
-left_arm = RTIMU.RTIMU(left_arm_settings)
-if not left_arm.IMUInit():
-    print "couldn't initialize Left Arm"
-else:
-    print "left arm online"
-
-left_arm.setSlerpPower(0.02)
-left_arm.setGyroEnable(True)
-left_arm.setAccelEnable(True)
-left_arm.setCompassEnable(True)
-left_arm_poll_interval = left_arm.IMUGetPollInterval()/1000.0
-left_arm_control_pin = 11
-left_arm_controller = Controller(left_arm_control_pin, 1.7, -1.7, 0.1)
-
-right_arm_control_pin = 16
 
 
 # gpio library setup
@@ -158,37 +139,14 @@ def GPIOSetup():
 
 def exit_fn():
     print "Exiting cleanly"
-    #GPIO.cleanup()
+    GPIO.cleanup()
 
 atexit.register(exit_fn)
 
-counts = 0
-state = 0
-param = 1.7
-
 if __name__ == '__main__':
 #    GPIOSetup()
-#    while True:
-#        if left_arm.IMURead():
-#            x = left_arm.getIMUData()['accel'][0]
-#            if x < -param and state == 0:
-#                print("here")
-#                state = 1
-#            if x > param and state == 1:
-#                print("there")
-#                state = 0
-#                GPIO.output(right_arm_control_pin, GPIO.HIGH)
-#                time.sleep(0.1)
-#                GPIO.output(right_arm_control_pin, GPIO.LOW)
-    #test_imu = IMU_wrapper( "RIGHT ARM", "right_arm",True )
+    test_imu = IMU_wrapper( "RIGHT ARM", "right_arm",True )
     poll_interval = left_arm.IMUGetPollInterval()/1000.0
     while True:
-        #print(test_imu.get_accel())
-        print(left_arm.getIMUData()['accel'])
-        time.sleep(poll_interval)
-
-
-            #left_arm_controller.update(left_arm.getIMUData()['accel'])
-        #time.sleep(left_arm_poll_interval)
-        #time.sleep(0.3)
-
+        print(test_imu.get_accel())
+        time.sleep(0.005)
