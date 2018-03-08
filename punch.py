@@ -5,38 +5,75 @@ sys.path.append('.')
 import RTIMU
 import time
 import RPi.GPIO as GPIO
+import yaml
+
+class Master:
+    """ the overall system controller"""
+    def __init__(self, params, rate):
+        self.rate = rate
+        hardware_params = params['hardware_config']
+        movement_params = params['movement_params']
+
+        self.controllers = []
+        GPIO.setmode(GPIO.BOARD)
+        for limb in hardware_params:
+            GPIO.setup(hardware_params[limb]["pin"],
+                       GPIO.OUT,
+                       initial=GPIO.LOW)
+            self.controllers.append(Controller(hardware_params,
+                                               movement_params))
+    def run(self):
+        """ blocking call that runs the system indefinitely """
+        while True:
+            for controller in self.controllers:
+                controller.run()
+            self.safety()
+            time.sleep(self.rate)
+
+    def safety(self):
+        """ monitors that no pin stays high for too long """
+        pass
+        
 
 class Controller:
-    def __init__(self, control_pin, upper_bound, lower_bound, window):
-        self.jerk_thresh = 1.3
-        self.control_pin = control_pin
-        self.upper_bound = upper_bound
-        self.lower_bound = lower_bound
-        self.window = window
+    """ individual limb state machine """
+    def __init__(self, hardware_params, software_params):
+        
+        self.imu = IMU(hardware_params['name'],
+                       hardware_params['config'])
+
+        self.control_pin = hardware_params['pin']
+        self.upper_bound = software_params['high']
+        self.lower_bound = software_params['low']
+        self.window = software_params['window']
+        self.duration = software_params['duration']
+        self.cooldown = software_params['cooldown']
+
         self.x = 0
         self.y = 0
         self.z = 0
         self.state = 0
+
         self.low_detect_time = 0
-        self.fire_duration = 0.2
         self.fire_begin_time = 0
         self.cooldown = 1
         self.cooldown_start = 0
-        self.lx = 0
-        self.ly = 0
-        self.lx = 0
 
-    def update(self, new_accel):
-        self.lx = self.x
-        self.ly = self.y
-        self.lz = self.z
+    def close(self):
+        GPIO.output(self.control_pin, GPIO.LOW)
 
-        self.x = new_accel[0]
-        self.y = new_accel[1]
-        self.z = new_accel[2]
+    def release(self):
+        GPIO.output(self.control_pin, GPIO.HIGH)
+
+    def update(self):
+        vals = self.imu.get_accel()
+        self.x = vals[0]
+        self.y = vals[1]
+        self.z = vals[2]
         self.fired = False
 
     def run(self):
+        self.update()
         # awaiting dip on x
         if self.state == 0:
             self.close()
@@ -67,13 +104,6 @@ class Controller:
         elif self.state == 3:
             if time.time() - self.cooldown_start > self.cooldown:
                 self.state = 0
-
-
-    def close(self):
-        GPIO.output(self.control_pin, GPIO.LOW)
-
-    def release(self):
-        GPIO.output(self.control_pin, GPIO.HIGH)
 
 
 class IMU:
@@ -125,25 +155,19 @@ class IMU:
                 self.last_read_time = time.time()
         return self.accel
 
-
-# gpio library setup
-def GPIOSetup():
-    GPIO.setmode(GPIO.BOARD)
-    #GPIO.setup(right_arm_control_pin, GPIO.OUT, initial=GPIO.LOW)
-    #GPIO.setup(left_arm_control_pin, GPIO.OUT, initial=GPIO.LOW)
-    #GPIO.setup(right_arm_control_pin, GPIO.OUT, initial=GPIO.LOW)
-    #GPIO.setup(left_leg_control_pin, GPIO.OUT, initial=GPIO.LOW)
-    #GPIO.setup(right_leg_control_pin, GPIO.OUT, initial=GPIO.LOW)
-
 def exit_fn():
     print "Exiting cleanly"
     GPIO.cleanup()
 
-atexit.register(exit_fn)
 
 if __name__ == '__main__':
+    atexit.register(exit_fn)
     GPIOSetup()
-    test_imu = IMU( "RIGHT ARM", "./config/right_arm",True )
-    while True:
-        print(test_imu.get_accel())
-        time.sleep(0.005)
+    with open("config/config.yaml", 'r') as stream:
+        config = yaml.load(stream)
+    #test_imu = IMU( "RIGHT ARM", "./config/right_arm",True )
+    system = Master(config)
+    system.run()
+    #while True:
+    #    print(test_imu.get_accel())
+    #    time.sleep(0.005)
