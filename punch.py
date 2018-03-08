@@ -78,7 +78,7 @@ class Controller:
         GPIO.output(self.control_pin, GPIO.HIGH)
 
 
-left_arm_settings = RTIMU.Settings("left_arm")
+left_arm_settings = RTIMU.Settings("right_arm")
 left_arm = RTIMU.RTIMU(left_arm_settings)
 if not left_arm.IMUInit():
     print "couldn't initialize Left Arm"
@@ -91,48 +91,17 @@ left_arm_poll_interval = left_arm.IMUGetPollInterval()/1000.0
 left_arm_control_pin = 11
 left_arm_controller = Controller(left_arm_control_pin, 1.7, -1.7, 0.1)
 
-
-right_arm_settings = RTIMU.Settings("right_arm")
-right_arm = RTIMU.RTIMU(right_arm_settings)
-if (not right_arm.IMUInit()):
-    print "couldn't initialize IMU"
-right_arm.setSlerpPower(0.02)
-right_arm.setGyroEnable(True)
-right_arm.setAccelEnable(True)
-right_arm.setCompassEnable(True)
 right_arm_control_pin = 16
-right_arm_controller = Controller(right_arm_control_pin, 1.7, -1.7, 0.1)
-
-
-left_leg_settings = RTIMU.Settings("left_leg")
-left_leg = RTIMU.RTIMU(left_leg_settings)
-if (not left_leg.IMUInit()):
-    print "couldn't initialize IMU"
-left_leg.setSlerpPower(0.02)
-left_leg.setGyroEnable(True)
-left_leg.setAccelEnable(True)
-left_leg.setCompassEnable(True)
-left_leg_control_pin = 37
-left_leg_controller = Controller(left_leg_control_pin, 2.7, -2.7, 0.1)
-
-right_leg_settings = RTIMU.Settings("right_leg")
-right_leg = RTIMU.RTIMU(right_leg_settings)
-if (not right_leg.IMUInit()):
-    print "couldn't initialize IMU"
-right_leg.setSlerpPower(0.02)
-right_leg.setGyroEnable(True)
-right_leg.setAccelEnable(True)
-right_leg.setCompassEnable(True)
-right_leg_control_pin = 36
-right_leg_controller = Controller(right_leg_control_pin, 2.7, -2.7, 0.1)
 
 
 # gpio library setup
-GPIO.setmode(GPIO.BOARD)
-GPIO.setup(left_arm_control_pin, GPIO.OUT, initial=GPIO.LOW)
-GPIO.setup(right_arm_control_pin, GPIO.OUT, initial=GPIO.LOW)
-GPIO.setup(left_leg_control_pin, GPIO.OUT, initial=GPIO.LOW)
-GPIO.setup(right_leg_control_pin, GPIO.OUT, initial=GPIO.LOW)
+def GPIOSetup():
+    GPIO.setmode(GPIO.BOARD)
+    GPIO.setup(right_arm_control_pin, GPIO.OUT, initial=GPIO.LOW)
+    GPIO.setup(left_arm_control_pin, GPIO.OUT, initial=GPIO.LOW)
+    #GPIO.setup(right_arm_control_pin, GPIO.OUT, initial=GPIO.LOW)
+    #GPIO.setup(left_leg_control_pin, GPIO.OUT, initial=GPIO.LOW)
+    #GPIO.setup(right_leg_control_pin, GPIO.OUT, initial=GPIO.LOW)
 
 def exit_fn():
     print "Exiting cleanly"
@@ -140,19 +109,26 @@ def exit_fn():
 
 atexit.register(exit_fn)
 
-while True:
-    if left_arm.IMURead():
-        left_arm_controller.update(left_arm.getIMUData()['accel'])
-    if right_arm.IMURead():
-        right_arm_controller.update(right_arm.getIMUData()['accel'])
-        x = right_arm.getIMUData()['accel']
-        print(x)
-    if left_leg.IMURead():
-        left_leg_controller.update(left_leg.getIMUData()['accel'])
-    if right_leg.IMURead():
-        right_leg_controller.update(right_leg.getIMUData()['accel'])
-    #left_arm_controller.run()
-    #left_leg_controller.run()
-    #right_leg_controller.run()
-    time.sleep(left_arm_poll_interval)
+counts = 0
+state = 0
+param = 1.7
+
+if __name__ == '__main__':
+    GPIOSetup()
+    while True:
+        if left_arm.IMURead():
+            x = left_arm.getIMUData()['accel'][0]
+            if x < -param and state == 0:
+                print("here")
+                state = 1
+            if x > param and state == 1:
+                print("there")
+                state = 0
+                GPIO.output(right_arm_control_pin, GPIO.HIGH)
+                time.sleep(0.1)
+                GPIO.output(right_arm_control_pin, GPIO.LOW)
+
+
+            #left_arm_controller.update(left_arm.getIMUData()['accel'])
+        time.sleep(left_arm_poll_interval)
 
