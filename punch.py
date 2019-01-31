@@ -98,11 +98,11 @@ atexit.register(exit_fn)
 class TestClass:
     def __init__(self, imu):
         self.imu = imu
-        self.data = None
+        self.data = [0,0,0]
 
     def get(self):
         self.imu.update_accel()
-        if not self.imu.get_all_accel(self.data):
+        if not self.imu.get_accels(self.data):
             print("BAD")
         else:
             print(self.data)

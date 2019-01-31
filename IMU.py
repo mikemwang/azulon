@@ -42,12 +42,29 @@ class IMU:
         self.last_read_time = time.time()
         self.got_init_read = False
         self.active = self.wait_until_init()
+    
+    def get_accels(self, accel_container):
+        accel_container[0] = self.accel[0]
+        accel_container[1] = self.accel[1]
+        accel_container[2] = self.accel[2]
+        return self.is_alive
+
+    def is_alive(self):
+        """
+        check if the IMU is still running properly
+        """
+        return self.active and self.got_init_read
 
     def update_accel(self):
         """ 
-        reads and returns the accel if self.poll_interval has ellapsed,
-        else just returns most recent accel 
+        updates the acceleration readings
+        does not update if it is read before self.poll_interval has ellapsed
+        imu is dead if imu.IMURead() returns false
         """
+        if (self.got_init_read and not self.active):
+            #TODO error handling code here
+            return
+
         if time.time() - self.last_read_time > self.poll_interval:
             self.last_read_time = time.time()
             if self.imu.IMURead():
@@ -58,6 +75,9 @@ class IMU:
                 self.active = False
     
     def wait_until_init(self, timeout=500):
+        """
+        delay until the imu reads something, or until timeout ms has ellapsed
+        """
         t = time.time()
         while not self.got_init_read:
             self.update_accel()
