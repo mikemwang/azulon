@@ -18,9 +18,9 @@ class IMU:
             self.settings = RTIMU.Settings(self.location) 
             self.imu = RTIMU.RTIMU(self.settings)
             if not self.imu.IMUInit():
-                print self.name+"."*(2 if len(self.name) > 72 else 72-len(self.name)) + "OFFLINE"
+                print(self.name+"."*(2 if len(self.name) > 72 else 72-len(self.name)) + "OFFLINE")
             else:
-                print self.name+"."*(2 if len(self.name) > 73 else 73-len(self.name)) + "ONLINE"
+                print(self.name+"."*(2 if len(self.name) > 73 else 73-len(self.name)) + "ONLINE")
                 self.active = True
                 break
             if not retry:
@@ -44,10 +44,11 @@ class IMU:
         self.active = self.wait_until_init()
     
     def get_accels(self, accel_container):
+        self.update_accel()
         accel_container[0] = self.accel[0]
         accel_container[1] = self.accel[1]
         accel_container[2] = self.accel[2]
-        return self.is_alive
+        return self.is_alive()
 
     def is_alive(self):
         """
@@ -55,32 +56,55 @@ class IMU:
         """
         return self.active and self.got_init_read
 
-    def update_accel(self):
+    def update_accel(self, array):
         """ 
         updates the acceleration readings
         does not update if it is read before self.poll_interval has ellapsed
         imu is dead if imu.IMURead() returns false
         """
-        if (self.got_init_read and not self.active):
-            #TODO error handling code here
-            return
-
-        if time.time() - self.last_read_time > self.poll_interval:
-            self.last_read_time = time.time()
+        #if (self.got_init_read and not self.active):
+        #    #TODO error handling code here
+        #    print("here")
+        #    return False
+        while True:
+            try:
+                if (time.time() - self.last_read_time) > self.poll_interval:
+                    if (self.got_init_read and not self.active):
+                        for i in range(len(array)):
+                            array[i] = 0
+                    else:
+                        if self.imu.IMURead():
+                            self.last_read_time = time.time()
+                            self.got_init_read = True
+                            self.active = True
+                            data = self.imu.getIMUData()['accel']
+                            for i in range(len(array)):
+                                array[i] = data[i]
+                        else:
+                            self.active = False
+                            for i in range(len(array)):
+                                array[i] = 0
+            except KeyboardInterrupt:
+                print("imu exiting cleanly")
+                return
+            
+    
+    def init_accel(self):
+        if (time.time() - self.last_read_time) > self.poll_interval:
             if self.imu.IMURead():
+                self.last_read_time = time.time()
                 self.got_init_read = True
                 self.active = True
-                self.accel = self.imu.getIMUData()['accel']
             else:
                 self.active = False
-    
+
     def wait_until_init(self, timeout=500):
         """
         delay until the imu reads something, or until timeout ms has ellapsed
         """
         t = time.time()
         while not self.got_init_read:
-            self.update_accel()
+            self.init_accel()
             if (time.time() - t > timeout):
                 print("TIMED OUT")
                 return False

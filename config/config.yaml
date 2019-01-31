@@ -26,4 +26,5 @@ movement_params:
         high: 1.7
         window: 0.2                  # time within which to detect high after low
         duration: 0.15               # fire duration in seconds
+        cooldown: 0.7                # minimum wait between punches
     #TODO add kick params
