@@ -2,9 +2,10 @@ import sys, getopt
 import atexit
 
 sys.path.append('.')
-import RTIMU
 import time
 import RPi.GPIO as GPIO
+
+import IMU
 
 class Controller:
     def __init__(self, control_pin, upper_bound, lower_bound, window):
@@ -76,54 +77,7 @@ class Controller:
         GPIO.output(self.control_pin, GPIO.HIGH)
 
 
-class IMU:
-    def __init__(self, name, settings, retry=False):
-        """
-        initialization function
-        args:
-            name:     name of this imu
-            settings: path to settings file (leave out ini extension)
-            retry:    whether to retry connecting to imu
-        """
-        
-        self.name = name
-        # attempt to connect to imu, repeatedly if retry is true
-        self.location = settings
-        self.active = False
-        while True:
-            self.settings = RTIMU.Settings(self.location) 
-            self.imu = RTIMU.RTIMU(self.settings)
-            if not self.imu.IMUInit():
-                print self.name+"."*(2 if len(self.name) > 72 else 72-len(self.name)) + "OFFLINE"
-            else:
-                print self.name+"."*(2 if len(self.name) > 73 else 73-len(self.name)) + "ONLINE"
-                self.active = True
-                break
-            if not retry:
-                return
-            time.sleep(1)
-        self.imu.setSlerpPower(0.02)
-        self.imu.setGyroEnable(True)
-        self.imu.setAccelEnable(True)
-        self.imu.setCompassEnable(True)
-        self.poll_interval = self.imu.IMUGetPollInterval()/1000.0
-        print(self.poll_interval)
 
-        # use this to ensure we don't read too often
-        self.last_read_time = 0
-        # persistent storage of most recent accel value
-        self.accel = [0,0,0]
-
-    def get_accel(self):
-        """ reads and returns the accel if self.poll_interval has ellapsed,
-            else just returns most recent accel """
-        if not self.active:
-            return self.name+" IMU OFFLINE"
-        if time.time() - self.last_read_time > self.poll_interval:
-            if self.imu.IMURead():
-                self.accel = self.imu.getIMUData()['accel']
-                self.last_read_time = time.time()
-        return self.accel
 
 
 # gpio library setup
@@ -141,9 +95,25 @@ def exit_fn():
 
 atexit.register(exit_fn)
 
+class TestClass:
+    def __init__(self, imu):
+        self.imu = imu
+        self.data = None
+
+    def get(self):
+        self.imu.update_accel()
+        if not self.imu.get_all_accel(self.data):
+            print("BAD")
+        else:
+            print(self.data)
+
+    
+
 if __name__ == '__main__':
     GPIOSetup()
-    test_imu = IMU( "RIGHT ARM", "./config/right_arm",True )
+    test_imu = IMU.IMU( "LEFT ARM", "./config/left_arm",True )
+    test_class = TestClass(test_imu)
+    
     while True:
-        print(test_imu.get_accel())
+        test_class.get()
         time.sleep(0.005)
